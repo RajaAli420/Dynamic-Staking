@@ -15,19 +15,7 @@ export class StakingInfo {
     claimed_rewards: number;
     claimable_rewards: number;
     apr_change_arr: APRChange[];
-    constructor(fields: {
-        is_initialized:boolean,
-        owner:PublicKey,
-        apr:number,
-        total_staked:number,
-        total_stakers:number,
-        pool_size:number,
-        staking_period:number,
-        emergency_stop:boolean,
-        claimed_rewards:number,
-        claimable_rewards:number,
-        apr_change_arr:APRChange[],
-    }) {
+    constructor(fields: any) {
         this.is_initialized = fields.is_initialized
         this.owner = fields.owner
         this.apr = fields.apr
@@ -38,7 +26,7 @@ export class StakingInfo {
         this.emergency_stop = fields.emergency_stop
         this.claimed_rewards = fields.claimed_rewards
         this.claimable_rewards = fields.claimable_rewards
-        this.apr_change_arr == fields.apr_change_arr
+        this.apr_change_arr = fields.apr_change_arr
     }
 }
 export class APRChange {
@@ -57,7 +45,7 @@ export class Stakers {
     amount: number;
     time_of_stake: number;
     staking_time_period: number;
-    constructor(fields) {
+    constructor(fields:any) {
         this.is_initialized = fields.is_initialized
         this.wallet_address = fields.wallet_address
         this.amount = fields.amount
@@ -114,12 +102,11 @@ export const StakingSchema = new Map<any, any>([
 
 
 extendBorsh();
-export async function createPlatformAccount(platformAccount, payerAccount) {
+export async function createPlatformAccount(platformAccount:Keypair, payerAccount:Keypair) {
     let test: APRChange[] = []
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 1000; i++) {
         test.push(new APRChange({ new_apr: 0, time_of_change: 0, reward_change: 0 }))
     }
-    
     let platformSize = borsh.serialize(StakingSchema, new StakingInfo({
         is_initialized: false,
         owner: new PublicKey(0),

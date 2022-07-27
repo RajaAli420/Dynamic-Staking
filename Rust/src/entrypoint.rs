@@ -1,5 +1,7 @@
-use solana_program::{
-    account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, msg, pubkey::Pubkey,
+use {
+    solana_program::{
+    account_info::AccountInfo, entrypoint, entrypoint::ProgramResult, pubkey::Pubkey}
+    ,crate::processor::Processor
 };
 
 entrypoint!(process_instruction);
@@ -8,11 +10,8 @@ fn process_instruction(
     accounts: &[AccountInfo],
     instruction_data: &[u8],
 ) -> ProgramResult {
-    msg!(
-        "process_instruction: {}: {} accounts, data={:?}",
-        program_id,
-        accounts.len(),
-        instruction_data
-    );
+    if let Err(error) = Processor::start(*program_id, accounts, instruction_data){
+        return Err(error);
+    }
     Ok(())
 }

@@ -49,7 +49,7 @@ class StakingInfo {
         this.emergency_stop = fields.emergency_stop;
         this.claimed_rewards = fields.claimed_rewards;
         this.claimable_rewards = fields.claimable_rewards;
-        this.apr_change_arr == fields.apr_change_arr;
+        this.apr_change_arr = fields.apr_change_arr;
     }
 }
 exports.StakingInfo = StakingInfo;
@@ -117,7 +117,7 @@ exports.StakingSchema = new Map([
 function createPlatformAccount(platformAccount, payerAccount) {
     return __awaiter(this, void 0, void 0, function* () {
         let test = [];
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 1000; i++) {
             test.push(new APRChange({ new_apr: 0, time_of_change: 0, reward_change: 0 }));
         }
         let platformSize = borsh.serialize(exports.StakingSchema, new StakingInfo({

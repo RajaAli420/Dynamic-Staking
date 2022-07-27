@@ -11,12 +11,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.connection = exports.programId = void 0;
 const web3_js_1 = require("@solana/web3.js");
-const Schema_1 = require("./Schema");
-exports.programId = new web3_js_1.PublicKey("D5EAiEZGuAvJL8woxDNjyW2VDuR89FXEXg37deAJVohi");
+const Functions_1 = require("./Functions");
+exports.programId = new web3_js_1.PublicKey("ChVWFvL2eq5mgEyffo6G3NtQMRMtdGLjrSmVBjyekJbZ");
 exports.connection = new web3_js_1.Connection("https://api.devnet.solana.com");
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        yield (0, Schema_1.createPlatformAccount)("", "");
+        // await initPlatform()
+        yield (0, Functions_1.getPlatformData)();
     });
 }
 main();

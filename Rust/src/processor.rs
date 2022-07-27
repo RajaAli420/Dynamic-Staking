@@ -14,6 +14,7 @@ use {
     solana_program::{
         account_info::{next_account_info, AccountInfo},
         entrypoint::ProgramResult,
+        borsh::try_from_slice_unchecked,
         program::{invoke, invoke_signed},
         program_error::ProgramError,
         pubkey::Pubkey,
@@ -66,7 +67,7 @@ impl Processor {
         let mut stake_acc_info: Staker =
             BorshDeserialize::try_from_slice(&mut stake_account.data.borrow_mut())?;
         let mut staking_platform_info: StakingPlatform =
-            BorshDeserialize::try_from_slice(&mut staking_platform.data.borrow_mut())?;
+            try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
         if staker.is_signer != true
             || Account::unpack_unchecked(&mut staker_token_account.data.borrow_mut())?.owner
                 != *staker.key
@@ -173,7 +174,7 @@ impl Processor {
         let stake_acc_info: Staker =
             BorshDeserialize::try_from_slice(&mut stake_account.data.borrow_mut())?;
         let mut staking_platform_info: StakingPlatform =
-            BorshDeserialize::try_from_slice(&mut staking_platform.data.borrow_mut())?;
+            try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
         if staker.is_signer != true
             || Account::unpack_unchecked(&mut staker_token_account.data.borrow_mut())?.owner
                 != *staker.key
@@ -232,7 +233,7 @@ impl Processor {
         let stake_acc_info: Staker =
             BorshDeserialize::try_from_slice(&mut stake_account.data.borrow_mut())?;
         let mut staking_platform_info: StakingPlatform =
-            BorshDeserialize::try_from_slice(&mut staking_platform.data.borrow_mut())?;
+            try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
         if staker.is_signer != true
             || Account::unpack_unchecked(&mut staker_token_account.data.borrow_mut())?.owner
                 != *staker.key
@@ -303,11 +304,11 @@ impl Processor {
         let owner = next_account_info(iter)?;
         let staking_platform = next_account_info(iter)?;
         let mut staking_platform_info: StakingPlatform =
-            BorshDeserialize::try_from_slice(&mut staking_platform.data.borrow_mut())?;
+            try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
         if staking_platform_info.is_initialized==true {
             return Err(ProgramError::AccountAlreadyInitialized)
         }
-        if *owner.key!=Pubkey::from_str("s").unwrap(){
+        if *owner.key!=Pubkey::from_str("CANuE2zG2hjHPMbWLMU7vKiGZjeSR6FfqLNxrMRbuVMB").unwrap(){
                 return Err(StakeError::InvalidOwner.into())
         }
         if staking_platform.owner!=&program_id{
@@ -336,7 +337,7 @@ impl Processor {
             return Err(ProgramError::IllegalOwner)
         }
         let mut staking_platform_info: StakingPlatform =
-            BorshDeserialize::try_from_slice(&mut staking_platform.data.borrow_mut())?;
+            try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
         if 
              Account::unpack_unchecked(&mut pool_pda_token_account.data.borrow_mut())?.owner
                 != pda
