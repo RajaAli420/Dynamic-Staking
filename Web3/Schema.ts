@@ -133,7 +133,7 @@ export async function createPlatformAccount(platformAccount:Keypair, payerAccoun
 
 }
 
-export async function createStakeAccount(stakerAccount, payerAccount) {
+export async function createStakeAccount(stakerAccount:Keypair, payerAccount:Keypair) {
     let tx = new Transaction();
 
     let stakeAccountSize = borsh.serialize(StakingSchema, new Stakers({

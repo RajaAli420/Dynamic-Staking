@@ -12,13 +12,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.connection = exports.programId = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const Functions_1 = require("./Functions");
-exports.programId = new web3_js_1.PublicKey("ChVWFvL2eq5mgEyffo6G3NtQMRMtdGLjrSmVBjyekJbZ");
+exports.programId = new web3_js_1.PublicKey("7AAdUKbqNPxC4ng5cDsYpuxfHDcNsJhBnpwHUPhimbwz");
 exports.connection = new web3_js_1.Connection("https://api.devnet.solana.com");
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        // await initPlatform()
-        yield (0, Functions_1.getPlatformData)();
+        let platform = yield (0, Functions_1.initPlatform)();
+        yield (0, Functions_1.addTokenToPool)(platform);
+        // await stake()
+        // await unstake()
+        yield (0, Functions_1.getPlatformData)(platform);
     });
 }
 main();
+// let stakepda = await PublicKey.findProgramAddress([Buffer.from('DynamicAPR')], programId)
+// let poolPda = await PublicKey.findProgramAddress([Buffer.from('DynamicAPRPool')], programId)
+// console.log("STAKE PDA: ",stakepda[0].toBase58(),'\n',"POOL PDA :",poolPda[0].toBase58())
 //# sourceMappingURL=Main.js.map

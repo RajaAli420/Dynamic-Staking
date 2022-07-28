@@ -13,8 +13,8 @@ use {
     borsh::{BorshDeserialize, BorshSerialize},
     solana_program::{
         account_info::{next_account_info, AccountInfo},
-        entrypoint::ProgramResult,
         borsh::try_from_slice_unchecked,
+        entrypoint::ProgramResult,
         program::{invoke, invoke_signed},
         program_error::ProgramError,
         pubkey::Pubkey,
@@ -38,12 +38,14 @@ impl Processor {
             DynamicAPRInstruction::Unstake => Self::unstake(program_id, accounts),
             DynamicAPRInstruction::ClaimReward => Self::claim_rewards(program_id, accounts),
             DynamicAPRInstruction::InitializePlatform {
-                owner:_,
+                owner: _,
                 locking_time,
                 apr,
             } => Self::init_platform(program_id, accounts, locking_time, apr),
             DynamicAPRInstruction::RefundStakers => Self::refund_stakers(program_id, accounts),
-            DynamicAPRInstruction::AddTokenToPools { token_amount }=>Self::add_token_to_pool(program_id, accounts, token_amount)
+            DynamicAPRInstruction::AddTokenToPools { token_amount } => {
+                Self::add_token_to_pool(program_id, accounts, token_amount)
+            }
         }
     }
     fn stake(
@@ -61,8 +63,8 @@ impl Processor {
         let staking_token = next_account_info(iter)?;
         let token_program = next_account_info(iter)?;
         let (pda, _nonce) = Pubkey::find_program_address(&[b"DynamicAPR"], &program_id);
-        if staking_platform.owner!=&program_id || stake_account.owner!=&program_id{
-            return Err(ProgramError::IllegalOwner)
+        if staking_platform.owner != &program_id || stake_account.owner != &program_id {
+            return Err(ProgramError::IllegalOwner);
         }
         let mut stake_acc_info: Staker =
             BorshDeserialize::try_from_slice(&mut stake_account.data.borrow_mut())?;
@@ -76,7 +78,7 @@ impl Processor {
         {
             return Err(StakeError::InvalidOwner.into());
         }
-        stake_acc_info.amount = amount;
+        stake_acc_info.amount = amount / 1000000000;
         stake_acc_info.time_of_stake = time_of_stake;
         stake_acc_info.staking_time_period = time_of_stake; //supposedly time period of stake not needed
         stake_acc_info.time_of_stake = Clock::get()?.unix_timestamp as u64;
@@ -106,7 +108,9 @@ impl Processor {
             staking_platform_info.apr_change_arr.push(APRChange {
                 new_apr: staking_platform_info.apr,
                 time_of_change: Clock::get()?.unix_timestamp as u64,
-                reward_change: amount * staking_platform_info.apr as u64 / 100000,
+                reward_change: ((amount as f64 / 1000000000.00) as f64
+                    * staking_platform_info.apr as f64
+                    / 10000.00) as u64,
             })
         } else {
             let index = staking_platform_info.apr_change_arr.len() - 1;
@@ -116,7 +120,9 @@ impl Processor {
                 / 31536000.00)
                 * 100.00;
             let reward_before_apr_change =
-                time_passed * staking_platform_info.apr as f64 / 10000.00;
+                (time_passed * staking_platform_info.apr as f64 / 10000.00) * 1000000000.00;
+
+            solana_program::msg!("{:?}", reward_before_apr_change);
             staking_platform_info.apr_change_arr[index] = APRChange {
                 new_apr: staking_platform_info.apr_change_arr[index].new_apr,
                 time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
@@ -127,23 +133,26 @@ impl Processor {
             for i in 0..staking_platform_info.apr_change_arr.len() {
                 _claimable_reward += staking_platform_info.apr_change_arr[i].reward_change;
             }
-            let new_pool_size = staking_platform_info.pool_size as f64 - reward_before_apr_change;
+            let new_pool_size = (staking_platform_info.pool_size as f64 / 1000000000.00)
+                - (reward_before_apr_change / 1000000000.00);
+            solana_program::msg!("{:?}", new_pool_size);
+            solana_program::msg!("{:?}", new_pool_size * 1000000000.00);
             let percent_change_pool_size =
-                new_pool_size / staking_platform_info.pool_size as f64 / 100.00;
+                new_pool_size / (staking_platform_info.pool_size as f64 / 1000000000.00) / 100.00;
             let apr_change = staking_platform_info.apr as f64
                 - (percent_change_pool_size * staking_platform_info.apr as f64 / 100.00);
+            solana_program::msg!("{:?}", apr_change);
             staking_platform_info.apr = apr_change as u16;
             staking_platform_info.total_stakers += 1;
             staking_platform_info.total_staked += amount;
-            staking_platform_info.pool_size = new_pool_size as u64;
+            staking_platform_info.pool_size = (new_pool_size * 1000000000.00) as u64;
             staking_platform_info.claimable_rewards = _claimable_reward;
             //supposed annual reward on new APR for all stakers 0..n
-            let reward = staking_platform_info.total_staked as f64
-                * staking_platform_info.apr as f64
-                / 10000.00;
-
+            let reward =
+                (staking_platform_info.total_staked as f64 / 1000000000.00) * apr_change / 10000.00;
+            solana_program::msg!("{:?}", reward);
             if reward > staking_platform_info.pool_size as f64
-                || _claimable_reward > staking_platform_info.pool_size
+                || _claimable_reward / 1000000000 > staking_platform_info.pool_size
             {
                 return Err(StakeError::RewardEnding.into());
             }
@@ -153,8 +162,8 @@ impl Processor {
                 reward_change: reward as u64,
             })
         }
-        stake_acc_info.serialize(& mut & mut stake_account.data.borrow_mut()[..])?;
-        staking_platform_info.serialize(& mut & mut staking_platform.data.borrow_mut()[..])?;
+        stake_acc_info.serialize(&mut &mut stake_account.data.borrow_mut()[..])?;
+        staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }
     fn unstake(program_id: Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -168,8 +177,8 @@ impl Processor {
         let token_program = next_account_info(iter)?;
         let pda_account = next_account_info(iter)?;
         let (pda, _nonce) = Pubkey::find_program_address(&[b"DynamicAPR"], &program_id);
-        if staking_platform.owner!=&program_id || stake_account.owner!=&program_id{
-            return Err(ProgramError::IllegalOwner)
+        if staking_platform.owner != &program_id || stake_account.owner != &program_id {
+            return Err(ProgramError::IllegalOwner);
         }
         let stake_acc_info: Staker =
             BorshDeserialize::try_from_slice(&mut stake_account.data.borrow_mut())?;
@@ -209,10 +218,10 @@ impl Processor {
         staking_platform_info.total_stakers -= 1;
         **staker.try_borrow_mut_lamports()? = staker
             .lamports()
-            .checked_add(staker.lamports())
+            .checked_add(stake_account.lamports())
             .ok_or(ProgramError::InsufficientFunds)?;
-        **staker.try_borrow_mut_lamports()? = 0;
-        *staker.try_borrow_mut_data()? = &mut [];
+        **stake_account.try_borrow_mut_lamports()? = 0;
+        *stake_account.try_borrow_mut_data()? = &mut [];
         staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }
@@ -227,8 +236,8 @@ impl Processor {
         let token_program = next_account_info(iter)?;
         let pool_pda_account = next_account_info(iter)?;
         let (pda, _nonce) = Pubkey::find_program_address(&[b"DynamicAPRPool"], &program_id);
-        if staking_platform.owner!=&program_id || stake_account.owner!=&program_id{
-            return Err(ProgramError::IllegalOwner)
+        if staking_platform.owner != &program_id || stake_account.owner != &program_id {
+            return Err(ProgramError::IllegalOwner);
         }
         let stake_acc_info: Staker =
             BorshDeserialize::try_from_slice(&mut stake_account.data.borrow_mut())?;
@@ -286,8 +295,8 @@ impl Processor {
         ) {
             return Err(error);
         }
-        staking_platform_info.claimed_rewards=reward_on_last_change as u64;
-        staking_platform_info.serialize(& mut & mut staking_platform.data.borrow_mut()[..])?;
+        staking_platform_info.claimed_rewards = reward_on_last_change as u64;
+        staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }
     fn refund_stakers(_program_id: Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -305,25 +314,29 @@ impl Processor {
         let staking_platform = next_account_info(iter)?;
         let mut staking_platform_info: StakingPlatform =
             try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
-        if staking_platform_info.is_initialized==true {
-            return Err(ProgramError::AccountAlreadyInitialized)
+        if staking_platform_info.is_initialized == true {
+            return Err(ProgramError::AccountAlreadyInitialized);
         }
-        if *owner.key!=Pubkey::from_str("CANuE2zG2hjHPMbWLMU7vKiGZjeSR6FfqLNxrMRbuVMB").unwrap(){
-                return Err(StakeError::InvalidOwner.into())
+        if *owner.key != Pubkey::from_str("CANuE2zG2hjHPMbWLMU7vKiGZjeSR6FfqLNxrMRbuVMB").unwrap() {
+            return Err(StakeError::InvalidOwner.into());
         }
-        if staking_platform.owner!=&program_id{
-            return Err(ProgramError::IllegalOwner)
+        if staking_platform.owner != &program_id {
+            return Err(ProgramError::IllegalOwner);
         }
-        staking_platform_info.is_initialized=true;
+        staking_platform_info.is_initialized = true;
         staking_platform_info.owner = *owner.key;
-        staking_platform_info.apr=apr;
-        staking_platform_info.staking_period=locking_time;
+        staking_platform_info.apr = apr;
+        staking_platform_info.staking_period = locking_time;
 
-        staking_platform_info.serialize(& mut & mut staking_platform.data.borrow_mut()[..])?;
+        staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }
 
-    fn add_token_to_pool(program_id: Pubkey, accounts: &[AccountInfo],amount:u64)-> ProgramResult {
+    fn add_token_to_pool(
+        program_id: Pubkey,
+        accounts: &[AccountInfo],
+        amount: u64,
+    ) -> ProgramResult {
         let iter = &mut accounts.iter();
         let owner = next_account_info(iter)?;
         let owner_token_account = next_account_info(iter)?;
@@ -333,41 +346,41 @@ impl Processor {
         let token_program = next_account_info(iter)?;
         let pool_pda_account = next_account_info(iter)?;
         let (pda, _nonce) = Pubkey::find_program_address(&[b"DynamicAPRPool"], &program_id);
-        if staking_platform.owner!=&program_id{
-            return Err(ProgramError::IllegalOwner)
+        if staking_platform.owner != &program_id {
+            return Err(ProgramError::IllegalOwner);
         }
+        //add check so only owner can add to pool
         let mut staking_platform_info: StakingPlatform =
             try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
-        if 
-             Account::unpack_unchecked(&mut pool_pda_token_account.data.borrow_mut())?.owner
-                != pda
+
+        if Account::unpack_unchecked(&mut pool_pda_token_account.data.borrow_mut())?.owner != pda
             || pool_pda_account.key != &pda
         {
             return Err(StakeError::InvalidOwner.into());
         }
-         
-            if let Err(error) = invoke(
-                &SPLIX::transfer_checked(
-                    token_program.key,
-                    owner_token_account.key,
-                    staking_token.key,
-                    pool_pda_token_account.key,
-                    owner.key,
-                    &[owner.key],
-                    amount,
-                    9,
-                )?,
-                &[
-                    owner_token_account.clone(),
-                    staking_token.clone(),
-                    pool_pda_token_account.clone(),
-                    owner.clone(),
-                ],
-            ) {
-                return Err(error);
-            }
-            staking_platform_info.pool_size+=amount;
-            staking_platform_info.serialize(& mut & mut staking_platform.data.borrow_mut()[..])?;
+
+        if let Err(error) = invoke(
+            &SPLIX::transfer_checked(
+                token_program.key,
+                owner_token_account.key,
+                staking_token.key,
+                pool_pda_token_account.key,
+                owner.key,
+                &[owner.key],
+                amount,
+                9,
+            )?,
+            &[
+                owner_token_account.clone(),
+                staking_token.clone(),
+                pool_pda_token_account.clone(),
+                owner.clone(),
+            ],
+        ) {
+            return Err(error);
+        }
+        staking_platform_info.pool_size += amount;
+        staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }
 }

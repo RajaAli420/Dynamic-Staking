@@ -78,14 +78,14 @@ exports.StakingSchema = new Map([
             fields: [
                 ['is_initialized', 'u8'],
                 ['owner', 'pubkey'],
-                ['apr', 'u16'],
-                ['total_staked', 'u64'],
+                ['apr', 'f32'],
+                ['total_staked', 'f64'],
                 ['total_stakers', 'u16'],
-                ['pool_size', 'u64'],
+                ['pool_size', 'f64'],
                 ['staking_period', 'u64'],
                 ['emergency_stop', 'u8'],
-                ['claimed_rewards', 'u64'],
-                ['claimable_rewards', 'u64'],
+                ['claimed_rewards', 'f64'],
+                ['claimable_rewards', 'f64'],
                 ['apr_change_arr', [APRChange]],
             ]
         }
@@ -106,9 +106,9 @@ exports.StakingSchema = new Map([
         {
             kind: 'struct',
             fields: [
-                ['new_apr', 'u16'],
+                ['new_apr', 'f32'],
                 ['time_of_change', 'u64'],
-                ['reward_change', 'u64'],
+                ['reward_change', 'f64'],
             ]
         }
     ]
