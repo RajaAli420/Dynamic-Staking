@@ -48,7 +48,7 @@ function Owner() {
     return web3_js_1.Keypair.fromSecretKey(secretKey);
 }
 exports.Owner = Owner;
-let stakingPlatform = new web3_js_1.PublicKey('HJGqfZ2BP6udBfpM8Z2v7giH8fWYpKgLa1gaXE9FN2F4');
+let stakingPlatform = new web3_js_1.PublicKey('2reP5kMq9VXi4XwZzHQRkd7nT9uqmDbbUjyV3u1yPsGx');
 let stakingToken = new web3_js_1.PublicKey('AhHrdL1JcBDJMsLWCmMeebzR2UyV7FHAx29VCPpLsnYW');
 let poolPda = new web3_js_1.PublicKey('7M6LR7HHTJCDUdf7RgqxXmhygG2uQUcTGmvdrhmFuLYo');
 let poolPdaTokenAccount = new web3_js_1.PublicKey('4xYbLt9qrDYKxvQtPosxQEdoyZq3kJwCMuwDXff247Kx');
@@ -81,12 +81,11 @@ function initPlatform() {
         let tx = new web3_js_1.Transaction().add(stakingPlatformAcc, new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
         let hash = yield (0, web3_js_1.sendAndConfirmTransaction)(Main_1.connection, tx, [owner, stakingPlatform]);
         console.log(hash);
-        return stakingPlatform.publicKey;
     });
 }
 exports.initPlatform = initPlatform;
 const addTokenToPoolData = (0, buffer_layout_1.struct)([(0, buffer_layout_1.u8)('instruction'), (0, buffer_layout_utils_1.u64)('amount')]);
-function addTokenToPool(platform) {
+function addTokenToPool() {
     return __awaiter(this, void 0, void 0, function* () {
         let owner = Owner();
         let ownerTokenAccount = yield Main_1.connection.getTokenAccountsByOwner(owner.publicKey, {
@@ -104,7 +103,7 @@ function addTokenToPool(platform) {
                 isSigner: false,
                 isWritable: true
             }, {
-                pubkey: platform,
+                pubkey: stakingPlatform,
                 isSigner: false,
                 isWritable: true
             }, {
@@ -141,12 +140,13 @@ exports.addTokenToPool = addTokenToPool;
 const stakerData = (0, buffer_layout_1.struct)([(0, buffer_layout_1.u8)('instruction'), (0, buffer_layout_utils_1.u64)('amount'), (0, buffer_layout_utils_1.u64)('time_of_stake')]);
 function stake() {
     return __awaiter(this, void 0, void 0, function* () {
-        let staker = yield (0, Schema_1.getStaker2)();
+        let staker = yield (0, Schema_1.getStaker3)();
         console.log(staker.publicKey.toBase58());
         let stakerTokenAccount = yield Main_1.connection.getTokenAccountsByOwner(staker.publicKey, {
             mint: stakingToken,
             programId: spl_token_1.TOKEN_PROGRAM_ID
         });
+        console.log(stakerTokenAccount.value[0].pubkey.toBase58());
         let stakeAccount = web3_js_1.Keypair.generate();
         let stakeAccIxs = yield (0, Schema_1.createStakeAccount)(stakeAccount, staker);
         let keys = [{
@@ -178,18 +178,18 @@ function stake() {
                 isSigner: false,
                 isWritable: false
             }];
-        let amount = 3000 * 1000000000;
+        let amount = 7000 * 1000000000;
         let data = Buffer.alloc(stakerData.span);
         stakerData.encode({
             instruction: 0,
             amount: BigInt(amount),
             time_of_stake: BigInt(100000)
         }, data);
-        let tx = new web3_js_1.Transaction().add(stakeAccIxs, new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
-        tx.feePayer = staker.publicKey;
-        console.log(yield Main_1.connection.simulateTransaction(tx));
-        // let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
-        // console.log(hash)
+        // let tx=new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId }))
+        // tx.feePayer=staker.publicKey;
+        // console.log(await connection.simulateTransaction(tx))
+        let hash = yield (0, web3_js_1.sendAndConfirmTransaction)(Main_1.connection, new web3_js_1.Transaction().add(stakeAccIxs, new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId })), [staker, stakeAccount]);
+        console.log(hash);
     });
 }
 exports.stake = stake;
@@ -234,17 +234,17 @@ function unstake() {
         onlyInstructionData.encode({
             instruction: 1
         }, data);
-        // let tx=new Transaction().add(new TransactionInstruction({ keys, data, programId }))
-        // tx.feePayer=staker.publicKey;
-        // console.log(await connection.simulateTransaction(tx))
-        let hash = yield (0, web3_js_1.sendAndConfirmTransaction)(Main_1.connection, new web3_js_1.Transaction().add(new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId })), [staker]);
-        console.log(hash);
+        let tx = new web3_js_1.Transaction().add(new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
+        tx.feePayer = staker.publicKey;
+        console.log(yield Main_1.connection.simulateTransaction(tx));
+        // let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
+        // console.log(hash)
     });
 }
 exports.unstake = unstake;
-function getPlatformData(platform) {
+function getPlatformData() {
     return __awaiter(this, void 0, void 0, function* () {
-        let data = yield Main_1.connection.getAccountInfo(platform);
+        let data = yield Main_1.connection.getAccountInfo(stakingPlatform);
         let info = borsh.deserializeUnchecked(Schema_1.StakingSchema, Schema_1.StakingInfo, data.data);
         console.log("OWNER : ", info.owner.toBase58());
         console.log("Pool Size: ", parseFloat(info.pool_size.toString()));

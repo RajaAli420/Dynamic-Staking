@@ -2,7 +2,7 @@ import { connection, programId } from './Main'
 import { Keypair, PublicKey, sendAndConfirmTransaction, Transaction, TransactionInstruction } from '@solana/web3.js'
 import { u64, publicKey } from '@solana/buffer-layout-utils'
 import { u8, struct, u16 } from '@solana/buffer-layout'
-import { createPlatformAccount, createStakeAccount, getStaker, getStaker2, StakingInfo, StakingSchema } from './Schema';
+import { createPlatformAccount, createStakeAccount, getStaker, getStaker2, getStaker3, StakingInfo, StakingSchema } from './Schema';
 import * as borsh from 'borsh'
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 export function Owner() {
@@ -12,7 +12,7 @@ export function Owner() {
     const secretKey = Uint8Array.from(JSON.parse(secretkeyString));
     return Keypair.fromSecretKey(secretKey);
 }
-let stakingPlatform = new PublicKey('HJGqfZ2BP6udBfpM8Z2v7giH8fWYpKgLa1gaXE9FN2F4')
+let stakingPlatform = new PublicKey('2reP5kMq9VXi4XwZzHQRkd7nT9uqmDbbUjyV3u1yPsGx')
 let stakingToken = new PublicKey('AhHrdL1JcBDJMsLWCmMeebzR2UyV7FHAx29VCPpLsnYW')
 let poolPda = new PublicKey('7M6LR7HHTJCDUdf7RgqxXmhygG2uQUcTGmvdrhmFuLYo')
 let poolPdaTokenAccount = new PublicKey('4xYbLt9qrDYKxvQtPosxQEdoyZq3kJwCMuwDXff247Kx')
@@ -23,9 +23,9 @@ interface InitPlatform {
     instruction: number;
     owner: PublicKey;
     locking_time: bigint;
-    apr: number
+    apr: bigint
 }
-const initPlatformData = struct<InitPlatform>([u8('instruction'), publicKey('owner'), u64('locking_time'), u16('apr')])
+const initPlatformData = struct<InitPlatform>([u8('instruction'), publicKey('owner'), u64('locking_time'), u64('apr')])
 export async function initPlatform() {
     let owner = Owner();
     let stakingPlatform = Keypair.generate();
@@ -45,7 +45,7 @@ export async function initPlatform() {
         instruction: 4,
         owner: owner.publicKey,
         locking_time: BigInt(123213123),
-        apr: 3000,
+        apr: BigInt(3000),
     }, data)
 
     let tx = new Transaction().add(stakingPlatformAcc, new TransactionInstruction({ keys, data, programId }))
@@ -113,12 +113,13 @@ interface Staker {
 }
 const stakerData = struct<Staker>([u8('instruction'), u64('amount'), u64('time_of_stake')])
 export async function stake() {
-    let staker = await getStaker2();
+    let staker = await getStaker3();
     console.log(staker.publicKey.toBase58())
     let stakerTokenAccount = await connection.getTokenAccountsByOwner(staker.publicKey, {
         mint: stakingToken,
         programId: TOKEN_PROGRAM_ID
     })
+    console.log(stakerTokenAccount.value[0].pubkey.toBase58())
     let stakeAccount = Keypair.generate()
     let stakeAccIxs = await createStakeAccount(stakeAccount, staker)
     let keys = [{
@@ -150,17 +151,17 @@ export async function stake() {
         isSigner: false,
         isWritable: false
     }];
-    let amount = 3000 * 1000000000;
+    let amount = 7000 * 1000000000;
     let data = Buffer.alloc(stakerData.span)
     stakerData.encode({
         instruction: 0,
         amount: BigInt(amount),
         time_of_stake: BigInt(100000)
     }, data)
-    let tx=new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId }))
+    // let tx=new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId }))
 
-    tx.feePayer=staker.publicKey;
-    console.log(await connection.simulateTransaction(tx))
+    // tx.feePayer=staker.publicKey;
+    // console.log(await connection.simulateTransaction(tx))
     // let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
     // console.log(hash)
 }
@@ -208,11 +209,11 @@ export async function unstake(){
     onlyInstructionData.encode({
         instruction:1
     },data);
-    // let tx=new Transaction().add(new TransactionInstruction({ keys, data, programId }))
-    // tx.feePayer=staker.publicKey;
-    // console.log(await connection.simulateTransaction(tx))
-    let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
-    console.log(hash)
+    let tx=new Transaction().add(new TransactionInstruction({ keys, data, programId }))
+    tx.feePayer=staker.publicKey;
+    console.log(await connection.simulateTransaction(tx))
+    // let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
+    // console.log(hash)
 }
 export async function getPlatformData() {
     let data = await connection.getAccountInfo(stakingPlatform);

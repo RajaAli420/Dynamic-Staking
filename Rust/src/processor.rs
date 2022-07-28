@@ -15,6 +15,7 @@ use {
         account_info::{next_account_info, AccountInfo},
         borsh::try_from_slice_unchecked,
         entrypoint::ProgramResult,
+        msg,
         program::{invoke, invoke_signed},
         program_error::ProgramError,
         pubkey::Pubkey,
@@ -111,59 +112,138 @@ impl Processor {
                 reward_change: ((amount as f64 / 1000000000.00) as f64
                     * staking_platform_info.apr as f64
                     / 10000.00) as u64,
-            })
+            });
+            staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         } else {
             let index = staking_platform_info.apr_change_arr.len() - 1;
-            let time_passed = ((Clock::get()?.unix_timestamp as u64
-                - staking_platform_info.apr_change_arr[index].time_of_change)
-                as f64
-                / 31536000.00)
-                * 100.00;
-            let reward_before_apr_change =
-                (time_passed * staking_platform_info.apr as f64 / 10000.00) * 1000000000.00;
-
-            solana_program::msg!("{:?}", reward_before_apr_change);
-            staking_platform_info.apr_change_arr[index] = APRChange {
-                new_apr: staking_platform_info.apr_change_arr[index].new_apr,
-                time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
-                reward_change: reward_before_apr_change as u64, //calculate reward on previous apr w.r.t time passed before new staker
-            };
-            //fixed reward for all stakers on all previous APR 0..n
-            let mut _claimable_reward = 0;
-            for i in 0..staking_platform_info.apr_change_arr.len() {
-                _claimable_reward += staking_platform_info.apr_change_arr[i].reward_change;
+            if index == 0 {
+                let mut time_passed = ((Clock::get()?.unix_timestamp as u64
+                    - staking_platform_info.apr_change_arr[index].time_of_change)
+                    as f64
+                    / 31536000.00)
+                    * 100.00;
+                time_passed = round(time_passed, 4);
+                let reward_before_apr_change =
+                    time_passed * staking_platform_info.apr as f64 / 10000.00;
+                
+                staking_platform_info.apr_change_arr[index] = APRChange {
+                    new_apr: staking_platform_info.apr_change_arr[index].new_apr,
+                    time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
+                    reward_change: (round(reward_before_apr_change,4)*10000.00) as u64, //calculate reward on previous apr w.r.t time passed before new staker
+                };
+                //fixed reward for all stakers on all previous APR 0..n
+                let mut _claimable_reward = 0.00;
+                for i in 0..staking_platform_info.apr_change_arr.len() {
+                    _claimable_reward += staking_platform_info.apr_change_arr[i].reward_change as f64/10000.00;
+                }
+                let mut new_pool_size = (staking_platform_info.pool_size as f64 / 1000000000.00)
+                    - reward_before_apr_change;
+                    new_pool_size= round(new_pool_size, 4)*10000.0;
+                
+                let percent_change_pool_size = reward_before_apr_change * 100.0
+                    / (staking_platform_info.pool_size as f64 / 1000000000.00);
+                let mut apr_change = staking_platform_info.apr as f64
+                    - (percent_change_pool_size * staking_platform_info.apr as f64 / 100.00);
+                    msg!("{:?}",apr_change);
+                    apr_change = round(apr_change, 4)*10000.0;
+                msg!("{:?}",apr_change);
+                msg!("{:?}",new_pool_size);
+                staking_platform_info.apr = apr_change as u64;
+                staking_platform_info.total_stakers += 1;
+                staking_platform_info.total_staked += amount;
+                staking_platform_info.pool_size = new_pool_size  as u64;
+                // staking_platform_info.claimable_rewards = _claimable_reward;
+                //supposed annual reward on new APR for all stakers 0..n
+                let reward = (staking_platform_info.total_staked as f64 / 1000000000.00)
+                    * apr_change
+                    / 100000000.00;
+                
+                if reward > staking_platform_info.pool_size  as f64/10000.00
+                    || _claimable_reward as f64/ 1000000000.00 > staking_platform_info.pool_size as f64/10000.00
+                {
+                    return Err(StakeError::RewardEnding.into());
+                }
+                staking_platform_info.apr_change_arr.push(APRChange {
+                    new_apr: apr_change as u64,
+                    time_of_change: Clock::get()?.unix_timestamp as u64,
+                    reward_change: reward as u64,
+                });
+                staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
+            } else {
+                
+                let time_passed = ((Clock::get()?.unix_timestamp as u64
+                    - staking_platform_info.apr_change_arr[index].time_of_change)
+                    as f64
+                    / 31536000.00)
+                    * 100.00;
+                let reward_before_apr_change =
+                    time_passed * staking_platform_info.apr as f64 / 100000000.00;
+                    msg!("{:?}",staking_platform_info.apr);
+                    msg!("{:?}",staking_platform_info.pool_size);
+                    msg!("{:?}",staking_platform_info.apr_change_arr[index].new_apr);
+                staking_platform_info.apr_change_arr[index] = APRChange {
+                    new_apr: staking_platform_info.apr_change_arr[index].new_apr,
+                    time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
+                    reward_change: (round(reward_before_apr_change,4)*10000.00) as u64 //calculate reward on previous apr w.r.t time passed before new staker
+                };
+                //fixed reward for all stakers on all previous APR 0..n
+                let mut _claimable_reward = 0.00;
+                for i in 0..staking_platform_info.apr_change_arr.len() {
+                    _claimable_reward += staking_platform_info.apr_change_arr[i].reward_change as f64/10000.00;
+                }
+                let mut new_pool_size = (staking_platform_info.pool_size as f64 / 10000000000000.00)
+                    - reward_before_apr_change ;
+                    new_pool_size= round(new_pool_size, 4)*10000.0;
+                    let percent_change_pool_size = reward_before_apr_change * 100.0
+                    / (staking_platform_info.pool_size as f64 / 1000000000000.00);
+                let mut apr_change = staking_platform_info.apr  as f64/10000.00
+                    - (percent_change_pool_size * (staking_platform_info.apr as f64/10000.00) / 100.00);
+                    apr_change = round(apr_change, 4)*10000.0;
+                staking_platform_info.apr = apr_change as u64;
+                staking_platform_info.total_stakers += 1;
+                staking_platform_info.total_staked += amount;
+                staking_platform_info.pool_size = (new_pool_size) as u64;
+                // staking_platform_info.claimable_rewards = _claimable_reward;
+                //supposed annual reward on new APR for all stakers 0..n
+                let reward = (staking_platform_info.total_staked as f64 / 10000000000.00)
+                    * apr_change
+                    / 100000000.00;
+                msg!("{:?},{:?},{:?}",reward,staking_platform_info.pool_size  as f64/10000.00,_claimable_reward as f64/ 1000000000.00);
+                    if reward > staking_platform_info.pool_size  as f64/10000.00
+                    || _claimable_reward as f64/ 1000000000.00 > staking_platform_info.pool_size as f64/10000.00
+                {
+                    return Err(StakeError::RewardEnding.into());
+                }
+                staking_platform_info.apr_change_arr.push(APRChange {
+                    new_apr: apr_change as u64,
+                    time_of_change: Clock::get()?.unix_timestamp as u64,
+                    reward_change: reward as u64,
+                });
+                staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
             }
-            let new_pool_size = (staking_platform_info.pool_size as f64 / 1000000000.00)
-                - (reward_before_apr_change / 1000000000.00);
-            solana_program::msg!("{:?}", new_pool_size);
-            solana_program::msg!("{:?}", new_pool_size * 1000000000.00);
-            let percent_change_pool_size =
-                new_pool_size / (staking_platform_info.pool_size as f64 / 1000000000.00) / 100.00;
-            let apr_change = staking_platform_info.apr as f64
-                - (percent_change_pool_size * staking_platform_info.apr as f64 / 100.00);
-            solana_program::msg!("{:?}", apr_change);
-            staking_platform_info.apr = apr_change as u16;
-            staking_platform_info.total_stakers += 1;
-            staking_platform_info.total_staked += amount;
-            staking_platform_info.pool_size = (new_pool_size * 1000000000.00) as u64;
-            staking_platform_info.claimable_rewards = _claimable_reward;
-            //supposed annual reward on new APR for all stakers 0..n
-            let reward =
-                (staking_platform_info.total_staked as f64 / 1000000000.00) * apr_change / 10000.00;
-            solana_program::msg!("{:?}", reward);
-            if reward > staking_platform_info.pool_size as f64
-                || _claimable_reward / 1000000000 > staking_platform_info.pool_size
-            {
-                return Err(StakeError::RewardEnding.into());
+            if let Err(error) = invoke(
+                &SPLIX::transfer_checked(
+                    token_program.key,
+                    staker_token_account.key,
+                    staking_token.key,
+                    stake_pda_token_account.key,
+                    staker.key,
+                    &[staker.key],
+                    amount,
+                    9,
+                )?,
+                &[
+                    staker_token_account.clone(),
+                    staking_token.clone(),
+                    stake_pda_token_account.clone(),
+                    staker.clone(),
+                ],
+            ) {
+                return Err(error);
             }
-            staking_platform_info.apr_change_arr.push(APRChange {
-                new_apr: apr_change as u16,
-                time_of_change: Clock::get()?.unix_timestamp as u64,
-                reward_change: reward as u64,
-            })
         }
         stake_acc_info.serialize(&mut &mut stake_account.data.borrow_mut()[..])?;
-        staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
+        
         Ok(())
     }
     fn unstake(program_id: Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
@@ -307,7 +387,7 @@ impl Processor {
         program_id: Pubkey,
         accounts: &[AccountInfo],
         locking_time: u64,
-        apr: u16,
+        apr: u64,
     ) -> ProgramResult {
         let iter = &mut accounts.iter();
         let owner = next_account_info(iter)?;
@@ -383,4 +463,8 @@ impl Processor {
         staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }
+}
+fn round(x: f64, decimals: u32) -> f64 {
+    let y = 10i32.pow(decimals) as f64;
+    (x * y).round() / y
 }

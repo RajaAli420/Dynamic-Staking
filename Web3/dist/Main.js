@@ -16,11 +16,11 @@ exports.programId = new web3_js_1.PublicKey("7AAdUKbqNPxC4ng5cDsYpuxfHDcNsJhBnpw
 exports.connection = new web3_js_1.Connection("https://api.devnet.solana.com");
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        let platform = yield (0, Functions_1.initPlatform)();
-        yield (0, Functions_1.addTokenToPool)(platform);
-        // await stake()
+        // await initPlatform()
+        // await addTokenToPool()
+        yield (0, Functions_1.stake)();
         // await unstake()
-        yield (0, Functions_1.getPlatformData)(platform);
+        yield (0, Functions_1.getPlatformData)();
     });
 }
 main();

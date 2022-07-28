@@ -6,7 +6,7 @@ use {
 pub struct StakingPlatform {
     pub is_initialized: bool,
     pub owner: Pubkey,
-    pub apr: u16,
+    pub apr: u64,
     pub total_staked: u64,
     pub total_stakers: u16,
     pub pool_size: u64,
@@ -18,7 +18,7 @@ pub struct StakingPlatform {
 }
 #[derive(BorshSerialize, BorshDeserialize, Debug)]
 pub struct APRChange {
-    pub new_apr: u16,
+    pub new_apr: u64,
     pub time_of_change: u64,
     pub reward_change: u64
 }

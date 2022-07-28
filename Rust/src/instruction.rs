@@ -4,7 +4,7 @@ use {
     std::convert::TryInto,
 };
 
-const U16_BYTES: usize = 2;
+const _U16_BYTES: usize = 2;
 pub enum DynamicAPRInstruction {
     Stake {
         amount: u64,
@@ -15,7 +15,7 @@ pub enum DynamicAPRInstruction {
     InitializePlatform {
         owner: Pubkey,
         locking_time: u64,
-        apr: u16,
+        apr: u64,
     },
     RefundStakers,
     AddTokenToPools {
@@ -56,9 +56,9 @@ impl DynamicAPRInstruction {
                     .map(u64::from_le_bytes)
                     .ok_or(InvalidInstruction)?;
                 let apr = rest
-                    .get(..U16_BYTES)
+                    .get(..8)
                     .and_then(|slice| slice.try_into().ok())
-                    .map(u16::from_le_bytes)
+                    .map(u64::from_le_bytes)
                     .ok_or(InvalidInstruction)?;
                 Self::InitializePlatform {
                     owner,

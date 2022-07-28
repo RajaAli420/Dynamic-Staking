@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getStaker2 = exports.getStaker = exports.getPayer = exports.createStakeAccount = exports.createPlatformAccount = exports.StakingSchema = exports.Stakers = exports.APRChange = exports.StakingInfo = void 0;
+exports.getStaker3 = exports.getStaker2 = exports.getStaker = exports.getPayer = exports.createStakeAccount = exports.createPlatformAccount = exports.StakingSchema = exports.Stakers = exports.APRChange = exports.StakingInfo = void 0;
 const web3_js_1 = require("@solana/web3.js");
 const borsh_1 = require("./borsh");
 const borsh = __importStar(require("borsh"));
@@ -78,14 +78,14 @@ exports.StakingSchema = new Map([
             fields: [
                 ['is_initialized', 'u8'],
                 ['owner', 'pubkey'],
-                ['apr', 'f32'],
-                ['total_staked', 'f64'],
+                ['apr', 'u16'],
+                ['total_staked', 'u64'],
                 ['total_stakers', 'u16'],
-                ['pool_size', 'f64'],
+                ['pool_size', 'u64'],
                 ['staking_period', 'u64'],
                 ['emergency_stop', 'u8'],
-                ['claimed_rewards', 'f64'],
-                ['claimable_rewards', 'f64'],
+                ['claimed_rewards', 'u64'],
+                ['claimable_rewards', 'u64'],
                 ['apr_change_arr', [APRChange]],
             ]
         }
@@ -106,9 +106,9 @@ exports.StakingSchema = new Map([
         {
             kind: 'struct',
             fields: [
-                ['new_apr', 'f32'],
+                ['new_apr', 'u16'],
                 ['time_of_change', 'u64'],
-                ['reward_change', 'f64'],
+                ['reward_change', 'u64'],
             ]
         }
     ]
@@ -192,4 +192,12 @@ function getStaker2() {
     });
 }
 exports.getStaker2 = getStaker2;
+function getStaker3() {
+    return __awaiter(this, void 0, void 0, function* () {
+        const secretkeyString = "[72,70,240,100,34,104,189,193,49,129,174,232,96,227,239,103,191,199,210,154,6,118,202,184,141,195,94,161,25,117,19,228,171,36,1,38,254,25,192,53,5,242,177,58,168,131,111,150,88,172,171,232,72,187,15,160,161,2,176,210,209,78,204,12]";
+        const secretKey = Uint8Array.from(JSON.parse(secretkeyString));
+        return web3_js_1.Keypair.fromSecretKey(secretKey);
+    });
+}
+exports.getStaker3 = getStaker3;
 //# sourceMappingURL=Schema.js.map

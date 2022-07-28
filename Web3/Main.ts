@@ -6,9 +6,9 @@ import { createPlatformAccount } from "./Schema";
 export const programId=new PublicKey("7AAdUKbqNPxC4ng5cDsYpuxfHDcNsJhBnpwHUPhimbwz")
 export const connection=new Connection("https://api.devnet.solana.com")
 async function  main(){
-    // await initPlatform()
-    await addTokenToPool()
-    await stake()
+    await initPlatform()
+    // await addTokenToPool()
+    // await stake()
     // await unstake()
     await getPlatformData()
     

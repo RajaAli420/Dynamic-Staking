@@ -61,7 +61,7 @@ export const StakingSchema = new Map<any, any>([
             fields: [
                 ['is_initialized', 'u8'],
                 ['owner', 'pubkey'],
-                ['apr', 'u16'],
+                ['apr', 'u64'],
                 ['total_staked', 'u64'],
                 ['total_stakers', 'u16'],
                 ['pool_size', 'u64'],
@@ -90,7 +90,7 @@ export const StakingSchema = new Map<any, any>([
         {
             kind: 'struct',
             fields: [
-                ['new_apr', 'u16'],
+                ['new_apr', 'u64'],
                 ['time_of_change', 'u64'],
                 ['reward_change', 'u64'],
             ]
@@ -170,6 +170,14 @@ export async function getStaker() {
 export async function getStaker2() {
     const secretkeyString =
         "[232,142,24,24,92,153,114,42,40,155,215,58,39,157,75,253,73,79,216,140,94,56,237,24,58,121,89,42,96,195,143,116,176,68,138,210,49,49,1,145,31,172,242,120,134,134,185,236,61,101,48,76,220,244,24,112,158,203,63,80,171,11,104,180]"
+
+    const secretKey = Uint8Array.from(JSON.parse(secretkeyString));
+    return Keypair.fromSecretKey(secretKey);
+}
+
+export async function getStaker3() {
+    const secretkeyString =
+        "[72,70,240,100,34,104,189,193,49,129,174,232,96,227,239,103,191,199,210,154,6,118,202,184,141,195,94,161,25,117,19,228,171,36,1,38,254,25,192,53,5,242,177,58,168,131,111,150,88,172,171,232,72,187,15,160,161,2,176,210,209,78,204,12]"
 
     const secretKey = Uint8Array.from(JSON.parse(secretkeyString));
     return Keypair.fromSecretKey(secretKey);
