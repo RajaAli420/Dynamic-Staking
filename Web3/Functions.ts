@@ -12,7 +12,7 @@ export function Owner() {
     const secretKey = Uint8Array.from(JSON.parse(secretkeyString));
     return Keypair.fromSecretKey(secretKey);
 }
-let stakingPlatform = new PublicKey('2reP5kMq9VXi4XwZzHQRkd7nT9uqmDbbUjyV3u1yPsGx')
+let stakingPlatform = new PublicKey('8JGLkez6Uptb4gNGwEWGjM4GmLUCb22DS4ViZd9mTMAW')
 let stakingToken = new PublicKey('AhHrdL1JcBDJMsLWCmMeebzR2UyV7FHAx29VCPpLsnYW')
 let poolPda = new PublicKey('7M6LR7HHTJCDUdf7RgqxXmhygG2uQUcTGmvdrhmFuLYo')
 let poolPdaTokenAccount = new PublicKey('4xYbLt9qrDYKxvQtPosxQEdoyZq3kJwCMuwDXff247Kx')
@@ -147,11 +147,12 @@ export async function stake() {
         isSigner: false,
         isWritable: true
     }, {
+
         pubkey: TOKEN_PROGRAM_ID,
         isSigner: false,
         isWritable: false
     }];
-    let amount = 7000 * 1000000000;
+    let amount =4000 * 1000000000;
     let data = Buffer.alloc(stakerData.span)
     stakerData.encode({
         instruction: 0,
@@ -162,8 +163,8 @@ export async function stake() {
 
     // tx.feePayer=staker.publicKey;
     // console.log(await connection.simulateTransaction(tx))
-    // let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
-    // console.log(hash)
+    let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
+    console.log(hash)
 }
 interface OnlyInstruction{
     instruction:number
@@ -223,8 +224,19 @@ export async function getPlatformData() {
     console.log("APR: ",parseInt(info.apr.toString()))
     console.log("TOTAL STAKED :",parseInt(info.total_staked.toString()))
     for(let i = 0; i < info.apr_change_arr.length;i++) {
-        console.log( "ITERATION :",i,"REWARD: ",parseFloat(info.apr_change_arr[i].reward_change.toString()),
-        "TIME OF CHANGE: ",info.apr_change_arr[i].time_of_change.toString())
+        if(i>0){
+
+            if(i==info.apr_change_arr.length-1){
+                console.log( "ITERATION :",i,"REWARD: ",parseFloat(info.apr_change_arr[i].reward_change.toString()),
+                "TIME OF CHANGE: ",info.apr_change_arr[i].time_of_change.toString(),"APR :",parseInt(info.apr_change_arr[i].new_apr.toString())/10000000000)
+            }else{
+                console.log( "ITERATION :",i,"REWARD: ",parseFloat(info.apr_change_arr[i].reward_change.toString())/100000000,
+                "TIME OF CHANGE: ",info.apr_change_arr[i].time_of_change.toString(),"APR :",parseInt(info.apr_change_arr[i].new_apr.toString())/10000000000)
+            }
+        }else{
+            console.log( "ITERATION :",i,"REWARD: ",parseFloat(info.apr_change_arr[i].reward_change.toString())/100000000,
+        "TIME OF CHANGE: ",info.apr_change_arr[i].time_of_change.toString(),"APR :",parseInt(info.apr_change_arr[i].new_apr.toString())/100)
+        }
         
     }
 }

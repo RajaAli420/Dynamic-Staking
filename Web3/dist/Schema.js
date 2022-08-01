@@ -78,7 +78,7 @@ exports.StakingSchema = new Map([
             fields: [
                 ['is_initialized', 'u8'],
                 ['owner', 'pubkey'],
-                ['apr', 'u16'],
+                ['apr', 'u64'],
                 ['total_staked', 'u64'],
                 ['total_stakers', 'u16'],
                 ['pool_size', 'u64'],
@@ -106,7 +106,7 @@ exports.StakingSchema = new Map([
         {
             kind: 'struct',
             fields: [
-                ['new_apr', 'u16'],
+                ['new_apr', 'u64'],
                 ['time_of_change', 'u64'],
                 ['reward_change', 'u64'],
             ]

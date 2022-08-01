@@ -48,14 +48,14 @@ function Owner() {
     return web3_js_1.Keypair.fromSecretKey(secretKey);
 }
 exports.Owner = Owner;
-let stakingPlatform = new web3_js_1.PublicKey('2reP5kMq9VXi4XwZzHQRkd7nT9uqmDbbUjyV3u1yPsGx');
+let stakingPlatform = new web3_js_1.PublicKey('8JGLkez6Uptb4gNGwEWGjM4GmLUCb22DS4ViZd9mTMAW');
 let stakingToken = new web3_js_1.PublicKey('AhHrdL1JcBDJMsLWCmMeebzR2UyV7FHAx29VCPpLsnYW');
 let poolPda = new web3_js_1.PublicKey('7M6LR7HHTJCDUdf7RgqxXmhygG2uQUcTGmvdrhmFuLYo');
 let poolPdaTokenAccount = new web3_js_1.PublicKey('4xYbLt9qrDYKxvQtPosxQEdoyZq3kJwCMuwDXff247Kx');
 let ownerTokenAccount = new web3_js_1.PublicKey('8evS2o1HPVgCCx1kkrctCGopWd1Ksu82RmP2LLZGQYxj');
 let stakePda = new web3_js_1.PublicKey('Bx9ofJQhyF4W3jB6tJrUZVwju3XJAMuPeXQU63VpteS7');
 let stakePdaTokenAccount = new web3_js_1.PublicKey('2rEiavn1gT9pqxbQfsWHdU35vdeQnxJuHCKR1cuic7tZ');
-const initPlatformData = (0, buffer_layout_1.struct)([(0, buffer_layout_1.u8)('instruction'), (0, buffer_layout_utils_1.publicKey)('owner'), (0, buffer_layout_utils_1.u64)('locking_time'), (0, buffer_layout_1.u16)('apr')]);
+const initPlatformData = (0, buffer_layout_1.struct)([(0, buffer_layout_1.u8)('instruction'), (0, buffer_layout_utils_1.publicKey)('owner'), (0, buffer_layout_utils_1.u64)('locking_time'), (0, buffer_layout_utils_1.u64)('apr')]);
 function initPlatform() {
     return __awaiter(this, void 0, void 0, function* () {
         let owner = Owner();
@@ -76,7 +76,7 @@ function initPlatform() {
             instruction: 4,
             owner: owner.publicKey,
             locking_time: BigInt(123213123),
-            apr: 3000,
+            apr: BigInt(3000),
         }, data);
         let tx = new web3_js_1.Transaction().add(stakingPlatformAcc, new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
         let hash = yield (0, web3_js_1.sendAndConfirmTransaction)(Main_1.connection, tx, [owner, stakingPlatform]);
@@ -178,7 +178,7 @@ function stake() {
                 isSigner: false,
                 isWritable: false
             }];
-        let amount = 7000 * 1000000000;
+        let amount = 4000 * 1000000000;
         let data = Buffer.alloc(stakerData.span);
         stakerData.encode({
             instruction: 0,
@@ -251,7 +251,17 @@ function getPlatformData() {
         console.log("APR: ", parseInt(info.apr.toString()));
         console.log("TOTAL STAKED :", parseInt(info.total_staked.toString()));
         for (let i = 0; i < info.apr_change_arr.length; i++) {
-            console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()), "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString());
+            if (i > 0) {
+                if (i == info.apr_change_arr.length - 1) {
+                    console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()), "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 10000000000);
+                }
+                else {
+                    console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000, "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 10000000000);
+                }
+            }
+            else {
+                console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000, "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 100);
+            }
         }
     });
 }
