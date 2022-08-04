@@ -245,18 +245,18 @@ function unstake() {
 exports.unstake = unstake;
 function claimrReward() {
     return __awaiter(this, void 0, void 0, function* () {
-        let staker = yield (0, Schema_1.getStaker2)();
+        let staker = yield (0, Schema_1.getStaker)();
         console.log(staker.publicKey.toBase58());
         let keys = [{
                 pubkey: staker.publicKey,
                 isSigner: true,
                 isWritable: true
             }, {
-                pubkey: new web3_js_1.PublicKey('8fHUG7XKzXog8BA71BubtoUWEetUm9nDSo183yBzWmtd'),
+                pubkey: new web3_js_1.PublicKey('5CvV1pBumVcYdoeNGQo3YorxD24FAAMjuWwN4PiganXn'),
                 isSigner: false,
                 isWritable: true
             }, {
-                pubkey: new web3_js_1.PublicKey('HawFKRCKL2UJa6dszLkgbLrf11bf5ZcdBoDwekGL7vKA'),
+                pubkey: new web3_js_1.PublicKey('6kXJBAsbQYgA5M8JszPZtZhKk4NDchQzQabb1fB7YbUt'),
                 isSigner: false,
                 isWritable: true
             }, {
@@ -284,11 +284,11 @@ function claimrReward() {
         onlyInstructionData.encode({
             instruction: 3
         }, data);
-        let tx = new web3_js_1.Transaction().add(new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
-        tx.feePayer = staker.publicKey;
-        console.log(yield Main_1.connection.simulateTransaction(tx));
-        // let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
-        // console.log(hash)
+        // let tx=new Transaction().add(new TransactionInstruction({ keys, data, programId }))
+        // tx.feePayer=staker.publicKey;
+        // console.log(await connection.simulateTransaction(tx))
+        let hash = yield (0, web3_js_1.sendAndConfirmTransaction)(Main_1.connection, new web3_js_1.Transaction().add(new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId })), [staker]);
+        console.log(hash);
     });
 }
 exports.claimrReward = claimrReward;
@@ -320,4 +320,5 @@ function getPlatformData() {
     });
 }
 exports.getPlatformData = getPlatformData;
+// 1659348142
 //# sourceMappingURL=Functions.js.map

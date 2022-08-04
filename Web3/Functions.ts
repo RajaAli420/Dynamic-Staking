@@ -219,18 +219,18 @@ export async function unstake(){
     // console.log(hash)
 }
 export async function claimrReward(){
-    let staker = await getStaker2();
+    let staker = await getStaker();
     console.log(staker.publicKey.toBase58())
     let keys = [{
         pubkey: staker.publicKey,
         isSigner: true,
         isWritable: true
     }, {
-        pubkey: new PublicKey('8fHUG7XKzXog8BA71BubtoUWEetUm9nDSo183yBzWmtd'),
+        pubkey: new PublicKey('5CvV1pBumVcYdoeNGQo3YorxD24FAAMjuWwN4PiganXn'),
         isSigner: false,
         isWritable: true
     }, {
-        pubkey: new PublicKey('HawFKRCKL2UJa6dszLkgbLrf11bf5ZcdBoDwekGL7vKA'),
+        pubkey: new PublicKey('6kXJBAsbQYgA5M8JszPZtZhKk4NDchQzQabb1fB7YbUt'),
         isSigner: false,
         isWritable: true
     }, {
@@ -258,11 +258,11 @@ export async function claimrReward(){
     onlyInstructionData.encode({
         instruction:3
     },data);
-    let tx=new Transaction().add(new TransactionInstruction({ keys, data, programId }))
-    tx.feePayer=staker.publicKey;
-    console.log(await connection.simulateTransaction(tx))
-    // let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
-    // console.log(hash)
+    // let tx=new Transaction().add(new TransactionInstruction({ keys, data, programId }))
+    // tx.feePayer=staker.publicKey;
+    // console.log(await connection.simulateTransaction(tx))
+    let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
+    console.log(hash)
 }
 
 export async function getPlatformData() {
@@ -296,3 +296,4 @@ export async function getPlatformData() {
     console.log("VERIFYING POOL SIZE AFTER ADDING THE ABOVE REWARDS EXCEPT ITERATION 5 :",total)
 }
 
+// 1659348142

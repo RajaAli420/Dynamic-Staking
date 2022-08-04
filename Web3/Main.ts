@@ -11,7 +11,7 @@ async function  main(){
     // await stake()
     // await unstake()
     await claimrReward()
-    await getPlatformData()
+    // await getPlatformData()
     
 }
 main()

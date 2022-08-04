@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-use solana_program::{msg, program_pack::Pack};
-
 use crate::state::APRChange;
 
 use {
@@ -17,6 +15,7 @@ use {
         entrypoint::ProgramResult,
         program::{invoke, invoke_signed},
         program_error::ProgramError,
+        program_pack::Pack,
         pubkey::Pubkey,
         sysvar::{clock::Clock, Sysvar},
     },
@@ -116,25 +115,13 @@ impl Processor {
         } else {
             let index = staking_platform_info.apr_change_arr.len() - 1;
             if index == 0 {
-                // let mut time_passed = ((Clock::get()?.unix_timestamp as u64
-                //     - staking_platform_info.apr_change_arr[index].time_of_change)
-                //     as f64
-                //     / 31536000.00)
-                //     * 100.00;
-                // solana_program::msg!("{:?}", staking_platform_info.apr);
-                // time_passed = round(time_passed, 4);
-                // let mut reward_before_apr_change =
-                //     time_passed * staking_platform_info.apr as f64 / 10000.00;
-                // reward_before_apr_change = staking_platform_info.total_staked as f64
-                //     / 1000000000.00
-                //     * reward_before_apr_change;
                 let reward_before_apr_change = (Clock::get()?.unix_timestamp as u64
                     - staking_platform_info.apr_change_arr[index].time_of_change)
                     as f64
                     * (staking_platform_info.apr as f64 / 100.00)
                     * (staking_platform_info.total_staked as f64 / 1000000000.00)
-                    / 31536000.00;
-                solana_program::msg!("{:?}", reward_before_apr_change);
+                    / 31536000.00
+                    * 100.00;
                 staking_platform_info.apr_change_arr[index] = APRChange {
                     new_apr: staking_platform_info.apr_change_arr[index].new_apr,
                     time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
@@ -178,31 +165,13 @@ impl Processor {
                 staking_platform_info
                     .serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
             } else {
-                // let mut time_passed = ((Clock::get()?.unix_timestamp as u64
-                //     - staking_platform_info.apr_change_arr[index].time_of_change)
-                //     as f64
-                //     / 31536000.00)
-                //     * 100.00;
-                // time_passed = round(time_passed, 4);
-                // solana_program::msg!(
-                //     "{:?},{:?}",
-                //     Clock::get()?.unix_timestamp as u64,
-                //     staking_platform_info.apr as f64 / 10000000000.00
-                // );
-                // let mut reward_before_apr_change =
-                //     time_passed * staking_platform_info.apr as f64 / 10000000000.00;
-                // solana_program::msg!("{:?}", reward_before_apr_change);
-                // reward_before_apr_change = staking_platform_info.total_staked as f64
-                // / 1000000000.00
-                // * reward_before_apr_change;
                 let reward_before_apr_change = (Clock::get()?.unix_timestamp as u64
                     - staking_platform_info.apr_change_arr[index].time_of_change)
                     as f64
                     * (staking_platform_info.apr as f64 / 10000000000.00)
                     * (staking_platform_info.total_staked as f64 / 1000000000.00)
-                    / 31536000.00;
-                solana_program::msg!("{:?}", reward_before_apr_change);
-                solana_program::msg!("{:?}", reward_before_apr_change);
+                    / 31536000.00
+                    * 100.00;
                 staking_platform_info.apr_change_arr[index] = APRChange {
                     new_apr: staking_platform_info.apr_change_arr[index].new_apr,
                     time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
@@ -369,28 +338,31 @@ impl Processor {
                         - staking_platform_info.apr_change_arr[i].time_of_change;
                     // let percent_of_time = time_change as f64 / 31536000.00 * 100.00;
                     reward += (time_held as f64
-                        * stake_acc_info.amount as f64
-                        * staking_platform_info.apr_change_arr[i - 1].new_apr as f64
-                        / 10000.00) as f64;
+                        * (stake_acc_info.amount as f64
+                            * (staking_platform_info.apr_change_arr[i].new_apr as f64 / 100.00))
+                        / 100.00) as f64
+                        / 31536000.00;
                 } else {
                     let time_held = staking_platform_info.apr_change_arr[i + 1].time_of_change
                         - staking_platform_info.apr_change_arr[i].time_of_change;
                     // let percent_of_time = time_change as f64 / 31536000.00 * 100.00;
                     reward += (time_held as f64
-                        * stake_acc_info.amount as f64
-                        * staking_platform_info.apr_change_arr[i - 1].new_apr as f64
-                        / 10000000000.00) as f64;
+                        * (stake_acc_info.amount as f64
+                            * staking_platform_info.apr_change_arr[i - 1].new_apr as f64
+                            / 100.00)
+                        / 10000000000.00) as f64
+                        / 31536000.00;
                 }
             }
         }
-        msg!("{:?}", reward);
         let index = staking_platform_info.apr_change_arr.len() - 1;
-        let mut reward_on_last_change =
-            (current_time - staking_platform_info.apr_change_arr[index].time_of_change) as f64
-                * (staking_platform_info.apr as f64 / 10000000000.00)
-                * stake_acc_info.amount as f64
-                / 31536000.00;
-                msg!("{:?}", reward_on_last_change);
+
+        let mut reward_on_last_change = ((current_time
+            - staking_platform_info.apr_change_arr[index].time_of_change)
+            as f64
+            * ((staking_platform_info.apr as f64 / 10000000000.00) * stake_acc_info.amount as f64)
+            / 100.00)
+            / (31536000.00);
         reward_on_last_change += reward;
         if let Err(error) = invoke_signed(
             &SPLIX::transfer_checked(
@@ -400,7 +372,7 @@ impl Processor {
                 staker_token_account.key,
                 &pda,
                 &[&pda],
-                reward_on_last_change as u64,
+                (reward_on_last_change * 1000000000.00) as u64,
                 9,
             )?,
             &[

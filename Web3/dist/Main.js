@@ -21,7 +21,7 @@ function main() {
         // await stake()
         // await unstake()
         yield (0, Functions_1.claimrReward)();
-        yield (0, Functions_1.getPlatformData)();
+        // await getPlatformData()
     });
 }
 main();
