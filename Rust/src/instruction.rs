@@ -12,6 +12,7 @@ pub enum DynamicAPRInstruction {
     },
     Unstake,
     ClaimReward,
+    WithdrawPool,
     InitializePlatform {
         owner: Pubkey,
         locking_time: u64,
@@ -46,6 +47,7 @@ impl DynamicAPRInstruction {
             }
             1 => Self::Unstake,
             3 => Self::ClaimReward,
+            9 => Self::WithdrawPool,
             4 => {
                 let (owner, rest) = rest.split_at(32);
                 let owner = Pubkey::new(owner);

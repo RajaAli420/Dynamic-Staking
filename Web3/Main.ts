@@ -1,5 +1,5 @@
 import { Connection, PublicKey } from "@solana/web3.js";
-import { addTokenToPool, claimrReward, getPlatformData, initPlatform, stake, unstake } from "./Functions";
+import { addTokenToPool, claimrReward, getPlatformData, initPlatform, stake, unstake, withdrawFromPoolAdmin } from "./Functions";
 import { createPlatformAccount } from "./Schema";
 
 
@@ -10,8 +10,9 @@ async function  main(){
     // await addTokenToPool()
     // await stake()
     // await unstake()
-    await claimrReward()
-    // await getPlatformData()
+    // await withdrawFromPoolAdmin()
+    // await claimrReward()
+    await getPlatformData()
     
 }
 main()

@@ -1,5 +1,7 @@
 use std::str::FromStr;
 
+use solana_program::msg;
+
 use crate::state::APRChange;
 
 use {
@@ -36,6 +38,7 @@ impl Processor {
             } => Self::stake(program_id, accounts, amount, time_of_stake),
             DynamicAPRInstruction::Unstake => Self::unstake(program_id, accounts),
             DynamicAPRInstruction::ClaimReward => Self::claim_rewards(program_id, accounts),
+            DynamicAPRInstruction::WithdrawPool => Self::withdraw_pool(program_id, accounts),
             DynamicAPRInstruction::InitializePlatform {
                 owner: _,
                 locking_time,
@@ -77,6 +80,7 @@ impl Processor {
         {
             return Err(StakeError::InvalidOwner.into());
         }
+        stake_acc_info.wallet_address=*staker.key;
         stake_acc_info.amount = amount / 1000000000;
         stake_acc_info.time_of_stake = time_of_stake;
         stake_acc_info.staking_time_period = time_of_stake; //supposedly time period of stake not needed
@@ -264,7 +268,7 @@ impl Processor {
                 != *staker.key
             || Account::unpack_unchecked(&mut stake_pda_token_account.data.borrow_mut())?.owner
                 != pda
-            || pda_account.key != &pda
+            || pda_account.key != &pda || staker.key != &stake_acc_info.wallet_address
         {
             return Err(StakeError::InvalidOwner.into());
         }
@@ -276,7 +280,7 @@ impl Processor {
                 staker_token_account.key,
                 &pda,
                 &[&pda],
-                stake_acc_info.amount,
+                stake_acc_info.amount*1000000000,
                 9,
             )?,
             &[
@@ -470,6 +474,56 @@ impl Processor {
             return Err(error);
         }
         staking_platform_info.pool_size += amount;
+        staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
+        Ok(())
+    }
+    fn withdraw_pool(program_id: Pubkey, accounts: &[AccountInfo])-> ProgramResult {
+        let iter = &mut accounts.iter();
+        let owner = next_account_info(iter)?;
+        let owner_token_account = next_account_info(iter)?;
+        let staking_platform = next_account_info(iter)?;
+        let pool_pda_token_account = next_account_info(iter)?;
+        let staking_token = next_account_info(iter)?;
+        let token_program = next_account_info(iter)?;
+        let pool_pda_account = next_account_info(iter)?;
+        let (pda, _nonce) = Pubkey::find_program_address(&[b"DynamicAPRPool"], &program_id);
+        if staking_platform.owner != &program_id {
+            return Err(ProgramError::IllegalOwner);
+        }
+        //add check so only owner can add to pool
+        let mut staking_platform_info: StakingPlatform =
+            try_from_slice_unchecked(&mut staking_platform.data.borrow_mut())?;
+        if owner.key!=&staking_platform_info.owner {
+            return Err(ProgramError::IllegalOwner);
+        }
+        if Account::unpack_unchecked(&mut pool_pda_token_account.data.borrow_mut())?.owner != pda
+            || pool_pda_account.key != &pda
+        {
+            return Err(StakeError::InvalidOwner.into());
+        }
+        msg!("{:?}",staking_platform_info.pool_size/100000000);
+        if let Err(error) = invoke_signed(
+            &SPLIX::transfer_checked(
+                token_program.key,
+                pool_pda_token_account.key,
+                staking_token.key,
+                owner_token_account.key,
+                &pda,
+                &[&pda],
+                staking_platform_info.pool_size,
+                9,
+            )?,
+            &[
+                pool_pda_token_account.clone(),
+                staking_token.clone(),
+                owner_token_account.clone(),
+                pool_pda_account.clone(),
+            ],
+            &[&[&b"DynamicAPRPool"[..], &[_nonce]]],
+        ) {
+            return Err(error);
+        }
+        staking_platform_info.pool_size -= staking_platform_info.pool_size;
         staking_platform_info.serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
         Ok(())
     }

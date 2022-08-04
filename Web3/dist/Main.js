@@ -20,8 +20,9 @@ function main() {
         // await addTokenToPool()
         // await stake()
         // await unstake()
-        yield (0, Functions_1.claimrReward)();
-        // await getPlatformData()
+        // await withdrawFromPoolAdmin()
+        // await claimrReward()
+        yield (0, Functions_1.getPlatformData)();
     });
 }
 main();
