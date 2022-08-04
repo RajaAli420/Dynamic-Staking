@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPlatformData = exports.unstake = exports.stake = exports.addTokenToPool = exports.initPlatform = exports.Owner = void 0;
+exports.getPlatformData = exports.claimrReward = exports.unstake = exports.stake = exports.addTokenToPool = exports.initPlatform = exports.Owner = void 0;
 const Main_1 = require("./Main");
 const web3_js_1 = require("@solana/web3.js");
 const buffer_layout_utils_1 = require("@solana/buffer-layout-utils");
@@ -48,7 +48,7 @@ function Owner() {
     return web3_js_1.Keypair.fromSecretKey(secretKey);
 }
 exports.Owner = Owner;
-let stakingPlatform = new web3_js_1.PublicKey('8JGLkez6Uptb4gNGwEWGjM4GmLUCb22DS4ViZd9mTMAW');
+let stakingPlatform = new web3_js_1.PublicKey('gNhK5B187VEajKRsqX3xSQfEuGdvvwxGfiKir3nucjX');
 let stakingToken = new web3_js_1.PublicKey('AhHrdL1JcBDJMsLWCmMeebzR2UyV7FHAx29VCPpLsnYW');
 let poolPda = new web3_js_1.PublicKey('7M6LR7HHTJCDUdf7RgqxXmhygG2uQUcTGmvdrhmFuLYo');
 let poolPdaTokenAccount = new web3_js_1.PublicKey('4xYbLt9qrDYKxvQtPosxQEdoyZq3kJwCMuwDXff247Kx');
@@ -59,6 +59,7 @@ const initPlatformData = (0, buffer_layout_1.struct)([(0, buffer_layout_1.u8)('i
 function initPlatform() {
     return __awaiter(this, void 0, void 0, function* () {
         let owner = Owner();
+        console.log(owner.publicKey.toBase58());
         let stakingPlatform = web3_js_1.Keypair.generate();
         console.log(stakingPlatform.publicKey.toBase58());
         let stakingPlatformAcc = yield (0, Schema_1.createPlatformAccount)(stakingPlatform, owner);
@@ -178,18 +179,18 @@ function stake() {
                 isSigner: false,
                 isWritable: false
             }];
-        let amount = 4000 * 1000000000;
+        let amount = 250000 * 1000000000;
         let data = Buffer.alloc(stakerData.span);
         stakerData.encode({
             instruction: 0,
             amount: BigInt(amount),
             time_of_stake: BigInt(100000)
         }, data);
-        // let tx=new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId }))
-        // tx.feePayer=staker.publicKey;
-        // console.log(await connection.simulateTransaction(tx))
-        let hash = yield (0, web3_js_1.sendAndConfirmTransaction)(Main_1.connection, new web3_js_1.Transaction().add(stakeAccIxs, new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId })), [staker, stakeAccount]);
-        console.log(hash);
+        let tx = new web3_js_1.Transaction().add(stakeAccIxs, new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
+        tx.feePayer = staker.publicKey;
+        console.log(yield Main_1.connection.simulateTransaction(tx));
+        // let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
+        // console.log(hash)
     });
 }
 exports.stake = stake;
@@ -242,10 +243,60 @@ function unstake() {
     });
 }
 exports.unstake = unstake;
+function claimrReward() {
+    return __awaiter(this, void 0, void 0, function* () {
+        let staker = yield (0, Schema_1.getStaker2)();
+        console.log(staker.publicKey.toBase58());
+        let keys = [{
+                pubkey: staker.publicKey,
+                isSigner: true,
+                isWritable: true
+            }, {
+                pubkey: new web3_js_1.PublicKey('8fHUG7XKzXog8BA71BubtoUWEetUm9nDSo183yBzWmtd'),
+                isSigner: false,
+                isWritable: true
+            }, {
+                pubkey: new web3_js_1.PublicKey('HawFKRCKL2UJa6dszLkgbLrf11bf5ZcdBoDwekGL7vKA'),
+                isSigner: false,
+                isWritable: true
+            }, {
+                pubkey: stakingPlatform,
+                isSigner: false,
+                isWritable: true
+            }, {
+                pubkey: poolPdaTokenAccount,
+                isSigner: false,
+                isWritable: true
+            }, {
+                pubkey: stakingToken,
+                isSigner: false,
+                isWritable: true
+            }, {
+                pubkey: spl_token_1.TOKEN_PROGRAM_ID,
+                isSigner: false,
+                isWritable: false
+            }, {
+                pubkey: poolPda,
+                isSigner: false,
+                isWritable: false
+            }];
+        let data = Buffer.alloc(onlyInstructionData.span);
+        onlyInstructionData.encode({
+            instruction: 3
+        }, data);
+        let tx = new web3_js_1.Transaction().add(new web3_js_1.TransactionInstruction({ keys, data, programId: Main_1.programId }));
+        tx.feePayer = staker.publicKey;
+        console.log(yield Main_1.connection.simulateTransaction(tx));
+        // let hash=await sendAndConfirmTransaction(connection, new Transaction().add(new TransactionInstruction({ keys, data, programId })),[staker])
+        // console.log(hash)
+    });
+}
+exports.claimrReward = claimrReward;
 function getPlatformData() {
     return __awaiter(this, void 0, void 0, function* () {
         let data = yield Main_1.connection.getAccountInfo(stakingPlatform);
         let info = borsh.deserializeUnchecked(Schema_1.StakingSchema, Schema_1.StakingInfo, data.data);
+        let total = parseFloat(info.pool_size.toString()) / 100000000;
         console.log("OWNER : ", info.owner.toBase58());
         console.log("Pool Size: ", parseFloat(info.pool_size.toString()));
         console.log("APR: ", parseInt(info.apr.toString()));
@@ -256,13 +307,16 @@ function getPlatformData() {
                     console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()), "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 10000000000);
                 }
                 else {
+                    total += parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000;
                     console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000, "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 10000000000);
                 }
             }
             else {
+                total += parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000;
                 console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000, "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 100);
             }
         }
+        console.log("VERIFYING POOL SIZE AFTER ADDING THE ABOVE REWARDS EXCEPT ITERATION 5 :", total);
     });
 }
 exports.getPlatformData = getPlatformData;

@@ -18,8 +18,9 @@ function main() {
     return __awaiter(this, void 0, void 0, function* () {
         // await initPlatform()
         // await addTokenToPool()
-        yield (0, Functions_1.stake)();
+        // await stake()
         // await unstake()
+        yield (0, Functions_1.claimrReward)();
         yield (0, Functions_1.getPlatformData)();
     });
 }
