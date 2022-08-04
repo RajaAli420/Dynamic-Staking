@@ -122,10 +122,10 @@ impl Processor {
                 let reward_before_apr_change = (Clock::get()?.unix_timestamp as u64
                     - staking_platform_info.apr_change_arr[index].time_of_change)
                     as f64
-                    * (staking_platform_info.apr as f64 / 100.00)
-                    * (staking_platform_info.total_staked as f64 / 1000000000.00)
-                    / 31536000.00
-                    * 100.00;
+                    * ((staking_platform_info.apr as f64 / 100.00)
+                    * (staking_platform_info.total_staked as f64 / 1000000000.00)/100.00)
+                    / 31536000.00;
+                    msg!("{:?}",reward_before_apr_change);
                 staking_platform_info.apr_change_arr[index] = APRChange {
                     new_apr: staking_platform_info.apr_change_arr[index].new_apr,
                     time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
@@ -155,6 +155,7 @@ impl Processor {
                 let reward = (staking_platform_info.total_staked as f64 / 1000000000.00)
                     * apr_change
                     / 1000000000000.00;
+                    
                 if reward > staking_platform_info.pool_size as f64 / 100000000.00
                     || _claimable_reward as f64
                         > staking_platform_info.pool_size as f64 / 100000000.00
@@ -169,13 +170,14 @@ impl Processor {
                 staking_platform_info
                     .serialize(&mut &mut staking_platform.data.borrow_mut()[..])?;
             } else {
+                msg!("{:?}",(staking_platform_info.apr as f64 / 10000000000.00));
                 let reward_before_apr_change = (Clock::get()?.unix_timestamp as u64
                     - staking_platform_info.apr_change_arr[index].time_of_change)
                     as f64
-                    * (staking_platform_info.apr as f64 / 10000000000.00)
-                    * (staking_platform_info.total_staked as f64 / 1000000000.00)
-                    / 31536000.00
-                    * 100.00;
+                    * ((staking_platform_info.apr as f64 / 10000000000.00)
+                    * (staking_platform_info.total_staked as f64 / 1000000000.00)/100.00)
+                    / 31536000.00;
+                    msg!("{:?}",reward_before_apr_change);
                 staking_platform_info.apr_change_arr[index] = APRChange {
                     new_apr: staking_platform_info.apr_change_arr[index].new_apr,
                     time_of_change: staking_platform_info.apr_change_arr[index].time_of_change,
@@ -207,6 +209,7 @@ impl Processor {
                 let reward = (staking_platform_info.total_staked as f64 / 1000000000.00)
                     * apr_change
                     / 1000000000000.00;
+                    msg!("{:?}",reward);
                 if reward > staking_platform_info.pool_size as f64 / 100000000.00
                     || _claimable_reward as f64 / 100000000.00
                         > staking_platform_info.pool_size as f64 / 100000000.00
@@ -293,7 +296,7 @@ impl Processor {
         ) {
             return Err(error);
         }
-        staking_platform_info.total_staked -= stake_acc_info.amount;
+        staking_platform_info.total_staked -= stake_acc_info.amount*1000000000;
         staking_platform_info.total_stakers -= 1;
         **staker.try_borrow_mut_lamports()? = staker
             .lamports()
@@ -334,6 +337,7 @@ impl Processor {
         let mut reward = 0.00;
         let current_time = Clock::get()?.unix_timestamp as u64;
         for i in 0..staking_platform_info.apr_change_arr.len() - 1 {
+            msg!("{:?}","in loop");
             if stake_acc_info.time_of_stake
                 <= staking_platform_info.apr_change_arr[i].time_of_change
             {
@@ -359,15 +363,30 @@ impl Processor {
                 }
             }
         }
+        let mut reward_on_last_change=0.00;
         let index = staking_platform_info.apr_change_arr.len() - 1;
-
-        let mut reward_on_last_change = ((current_time
+        if staking_platform_info.apr_change_arr.len()==1{
+            msg!("{:?}","in if 1");
+            let time_held = current_time
+            - staking_platform_info.apr_change_arr[0].time_of_change;
+        // let percent_of_time = time_change as f64 / 31536000.00 * 100.00;
+        reward = (time_held as f64
+            * (stake_acc_info.amount as f64
+                * (staking_platform_info.apr_change_arr[0].new_apr as f64 / 100.00))
+            / 100.00) as f64
+            / 31536000.00;
+            msg!("{:?}",reward);
+        }else{
+            msg!("{:?}","in else 1");
+        reward_on_last_change = ((current_time
             - staking_platform_info.apr_change_arr[index].time_of_change)
             as f64
             * ((staking_platform_info.apr as f64 / 10000000000.00) * stake_acc_info.amount as f64)
             / 100.00)
             / (31536000.00);
+        }
         reward_on_last_change += reward;
+        msg!("{:?}",reward_on_last_change);
         if let Err(error) = invoke_signed(
             &SPLIX::transfer_checked(
                 token_program.key,
@@ -501,7 +520,8 @@ impl Processor {
         {
             return Err(StakeError::InvalidOwner.into());
         }
-        msg!("{:?}",staking_platform_info.pool_size/100000000);
+        
+        let amount=staking_platform_info.pool_size/100000000;
         if let Err(error) = invoke_signed(
             &SPLIX::transfer_checked(
                 token_program.key,
@@ -510,7 +530,7 @@ impl Processor {
                 owner_token_account.key,
                 &pda,
                 &[&pda],
-                staking_platform_info.pool_size,
+                amount*1000000000,
                 9,
             )?,
             &[

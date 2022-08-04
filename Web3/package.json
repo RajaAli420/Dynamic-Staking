@@ -1,9 +1,7 @@
 {
   "name": "web3",
   "version": "1.0.0",
-  
   "main": "Main.ts",
-  
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "tsc && ts-node-dev Main.ts"
@@ -15,7 +13,7 @@
   },
   "dependencies": {
     "@solana/spl-token": "^0.2.0",
-    "@solana/web3.js": "^1.32.0",
+    "@solana/web3.js": "^1.50.1",
     "bn": "^1.0.5",
     "bs58": "^4.0.1",
     "buffer-layout": "^1.2.2",

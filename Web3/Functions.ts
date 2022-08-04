@@ -12,13 +12,14 @@ export function Owner() {
     const secretKey = Uint8Array.from(JSON.parse(secretkeyString));
     return Keypair.fromSecretKey(secretKey);
 }
-let stakingPlatform = new PublicKey('gNhK5B187VEajKRsqX3xSQfEuGdvvwxGfiKir3nucjX')
+
+let stakingPlatform = new PublicKey('BuEm1DhPJa5AfEubViWtEvjXa6XTJpN3NHzLXz1vGZGB')
 let stakingToken = new PublicKey('AhHrdL1JcBDJMsLWCmMeebzR2UyV7FHAx29VCPpLsnYW')
-let poolPda = new PublicKey('7M6LR7HHTJCDUdf7RgqxXmhygG2uQUcTGmvdrhmFuLYo')
-let poolPdaTokenAccount = new PublicKey('4xYbLt9qrDYKxvQtPosxQEdoyZq3kJwCMuwDXff247Kx')
+let poolPda = new PublicKey('CQXvTTrveKewa3FtG5FunYZLQhDo6vcJYjWr3nnrMQZu')
+let poolPdaTokenAccount = new PublicKey('HvhTWX5uQNsPYwXkhLPqSCjBX3as58jEAogqR9ATuUm7')
 let ownerTokenAccount = new PublicKey('8evS2o1HPVgCCx1kkrctCGopWd1Ksu82RmP2LLZGQYxj')
-let stakePda = new PublicKey('Bx9ofJQhyF4W3jB6tJrUZVwju3XJAMuPeXQU63VpteS7')
-let stakePdaTokenAccount = new PublicKey('2rEiavn1gT9pqxbQfsWHdU35vdeQnxJuHCKR1cuic7tZ')
+let stakePda = new PublicKey('4ivwjYyJHg8syR28urBVjgbzCSxymk5c27pQ3ytuDd22')
+let stakePdaTokenAccount = new PublicKey('7ZhtSX9VC9SdUKfK6hwHuLtWfRxJrCPary4xSYug5pFS')
 interface InitPlatform {
     instruction: number;
     owner: PublicKey;
@@ -115,7 +116,7 @@ interface Staker {
 }
 const stakerData = struct<Staker>([u8('instruction'), u64('amount'), u64('time_of_stake')])
 export async function stake() {
-    let staker = await getStaker3();
+    let staker = await getStaker();
     console.log(staker.publicKey.toBase58())
     let stakerTokenAccount = await connection.getTokenAccountsByOwner(staker.publicKey, {
         mint: stakingToken,
@@ -154,7 +155,7 @@ export async function stake() {
         isSigner: false,
         isWritable: false
     }];
-    let amount = 250000 * 1000000000;
+    let amount = 2000 * 1000000000;
     let data = Buffer.alloc(stakerData.span)
     stakerData.encode({
         instruction: 0,
@@ -165,15 +166,15 @@ export async function stake() {
 
     tx.feePayer = staker.publicKey;
     console.log(await connection.simulateTransaction(tx))
-    // let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
-    // console.log(hash)
+    let hash = await sendAndConfirmTransaction(connection, new Transaction().add(stakeAccIxs, new TransactionInstruction({ keys, data, programId })), [staker, stakeAccount])
+    console.log(hash)
 }
 interface OnlyInstruction {
     instruction: number
 }
 const onlyInstructionData = struct<OnlyInstruction>([u8('instruction')]);
 export async function unstake() {
-    let staker = await getStaker3();
+    let staker = await getStaker();
     let stakerTokenAcc = await connection.getTokenAccountsByOwner(staker.publicKey, {
         mint: stakingToken,
         programId: TOKEN_PROGRAM_ID
@@ -227,6 +228,8 @@ export async function unstake() {
 }
 export async function claimrReward() {
     let staker = await getStaker();
+    let stakeAcc=await getStakerData(staker.publicKey.toBase58());
+    
     console.log(staker.publicKey.toBase58())
     let keys = [{
         pubkey: staker.publicKey,
@@ -237,7 +240,7 @@ export async function claimrReward() {
         isSigner: false,
         isWritable: true
     }, {
-        pubkey: new PublicKey('6kXJBAsbQYgA5M8JszPZtZhKk4NDchQzQabb1fB7YbUt'),
+        pubkey: stakeAcc[0].pubkey,
         isSigner: false,
         isWritable: true
     }, {
@@ -322,9 +325,9 @@ export async function withdrawFromPoolAdmin() {
 export async function getPlatformData() {
     let data = await connection.getAccountInfo(stakingPlatform);
     let info = borsh.deserializeUnchecked(StakingSchema, StakingInfo, data.data)
-    let total = parseFloat(info.pool_size.toString()) / 100000000;
+    let total = parseFloat(info.pool_size.toString())/100000000;
     console.log("OWNER : ", info.owner.toBase58())
-    console.log("Pool Size: ", parseFloat(info.pool_size.toString()))
+    console.log("Pool Size: ", parseFloat(info.pool_size.toString())/100000000)
     console.log("APR: ", parseInt(info.apr.toString()))
     console.log("TOTAL STAKED :", parseInt(info.total_staked.toString())/100000000)
     for (let i = 0; i < info.apr_change_arr.length; i++) {
@@ -342,7 +345,7 @@ export async function getPlatformData() {
             }
         } else {
             total += parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000
-            console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString()) / 100000000,
+            console.log("ITERATION :", i, "REWARD: ", parseFloat(info.apr_change_arr[i].reward_change.toString())/ 100000000,
                 "TIME OF CHANGE: ", info.apr_change_arr[i].time_of_change.toString(), "APR :", parseInt(info.apr_change_arr[i].new_apr.toString()) / 100)
         }
 
@@ -353,19 +356,21 @@ export async function getPlatformData() {
 // 1659348142
 
 export async function getStakerData(staker) {
+    
     let stakeAcc = await connection.getProgramAccounts(programId, {
         commitment: "confirmed",
         filters: [
             {dataSize:57},
-        //   {
-        //     memcmp: {
-        //       offset: 1,
-        //       bytes: staker
-        //     },
-        //   },
+          {
+            memcmp: {
+              offset: 1,
+              bytes: staker
+            },
+          },
         ],
       });
+      
       let data=borsh.deserialize(StakingSchema,Stakers,stakeAcc[0].account.data)
-      console.log(data.wallet_address.toBase58())
+      console.log(data.wallet_address.toBase58(),data.time_of_stake.toString())
       return stakeAcc
 }
