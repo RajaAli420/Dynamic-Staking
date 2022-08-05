@@ -116,7 +116,7 @@ interface Staker {
 }
 const stakerData = struct<Staker>([u8('instruction'), u64('amount'), u64('time_of_stake')])
 export async function stake() {
-    let staker = await getStaker();
+    let staker = await getStaker2();
     console.log(staker.publicKey.toBase58())
     let stakerTokenAccount = await connection.getTokenAccountsByOwner(staker.publicKey, {
         mint: stakingToken,
@@ -155,7 +155,7 @@ export async function stake() {
         isSigner: false,
         isWritable: false
     }];
-    let amount = 2000 * 1000000000;
+    let amount = 4000 * 1000000000;
     let data = Buffer.alloc(stakerData.span)
     stakerData.encode({
         instruction: 0,
@@ -370,7 +370,12 @@ export async function getStakerData(staker) {
         ],
       });
       
-      let data=borsh.deserialize(StakingSchema,Stakers,stakeAcc[0].account.data)
-      console.log(data.wallet_address.toBase58(),data.time_of_stake.toString())
+      
+      console.log(stakeAcc.length)
+      for(let i = 0; i < stakeAcc.length; i++){
+        let data=borsh.deserialize(StakingSchema,Stakers,stakeAcc[i].account.data)
+        console.log(data.wallet_address.toBase58())
+        console.log(data.amount.toString())
+      }
       return stakeAcc
 }

@@ -141,7 +141,7 @@ exports.addTokenToPool = addTokenToPool;
 const stakerData = (0, buffer_layout_1.struct)([(0, buffer_layout_1.u8)('instruction'), (0, buffer_layout_utils_1.u64)('amount'), (0, buffer_layout_utils_1.u64)('time_of_stake')]);
 function stake() {
     return __awaiter(this, void 0, void 0, function* () {
-        let staker = yield (0, Schema_1.getStaker)();
+        let staker = yield (0, Schema_1.getStaker2)();
         console.log(staker.publicKey.toBase58());
         let stakerTokenAccount = yield Main_1.connection.getTokenAccountsByOwner(staker.publicKey, {
             mint: stakingToken,
@@ -179,7 +179,7 @@ function stake() {
                 isSigner: false,
                 isWritable: false
             }];
-        let amount = 2000 * 1000000000;
+        let amount = 4000 * 1000000000;
         let data = Buffer.alloc(stakerData.span);
         stakerData.encode({
             instruction: 0,
@@ -393,8 +393,12 @@ function getStakerData(staker) {
                 },
             ],
         });
-        let data = borsh.deserialize(Schema_1.StakingSchema, Schema_1.Stakers, stakeAcc[0].account.data);
-        console.log(data.wallet_address.toBase58(), data.time_of_stake.toString());
+        console.log(stakeAcc.length);
+        for (let i = 0; i < stakeAcc.length; i++) {
+            let data = borsh.deserialize(Schema_1.StakingSchema, Schema_1.Stakers, stakeAcc[i].account.data);
+            console.log(data.wallet_address.toBase58());
+            console.log(data.amount.toString());
+        }
         return stakeAcc;
     });
 }
